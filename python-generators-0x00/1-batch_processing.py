@@ -37,12 +37,12 @@ def stream_users_in_batches(batch_size):
     """
     with get_db_connection() as conn:
         cursor = conn.cursor(dictionary=True)  # Fetch as dictionaries
-        total_users = cursor.execute("SELECT COUNT(*) FROM users")
+        cursor.execute("SELECT COUNT(*) FROM user_data")  # Changed from 'users' to 'user_data'
         total_users = cursor.fetchone()['COUNT(*)']
         offset = 0
         while offset < total_users:  # Loop 1: Iterate over batches
             cursor.execute(
-                "SELECT user_id, name, email, age FROM users LIMIT %s OFFSET %s",
+                "SELECT user_id, name, email, age FROM user_data LIMIT %s OFFSET %s",  # Changed to 'user_data'
                 (batch_size, offset)
             )
             batch = cursor.fetchall()
@@ -52,19 +52,20 @@ def stream_users_in_batches(batch_size):
 
 def batch_processing(batch_size):
     """
-    Process each batch of users to filter those over the age of 25.
+    Generator function to process each batch of users and filter those over the age of 25.
     
     Args:
         batch_size (int): Number of users to process per batch.
     
-    Prints:
+    Yields:
         dict: User details for users over 25.
     """
     user_stream = stream_users_in_batches(batch_size)
     for batch in user_stream:  # Loop 2: Iterate over yielded batches
         for user in batch:  # Loop 3: Iterate over users in batch
             if user['age'] > 25:
-                print(user)
+                yield user  # Return filtered user instead of print
 
 if __name__ == "__main__":
-    batch_processing(50)
+    for user in batch_processing(50):
+        print(user)
