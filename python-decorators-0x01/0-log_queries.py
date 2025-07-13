@@ -1,7 +1,6 @@
 import sqlite3
 import functools
 import logging
-import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -9,7 +8,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('database_queries.log'),  # Log to a file
-        logging.StreamHandler()  # Also log to console
+        logging.StreamHandler()  # Log to console
     ]
 )
 
@@ -20,7 +19,7 @@ def log_queries(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # Get the query from the arguments (assuming query is the first argument)
+        # Get the query from the arguments
         query = args[0] if args else kwargs.get('query', 'Unknown query')
         logging.info(f"Executing SQL query: {query}")
         # Execute the original function
@@ -37,7 +36,7 @@ def fetch_all_users(query):
     conn.close()
     return results
 
-# Example usage
+# Test the decorator
 if __name__ == "__main__":
     # Create a sample users table for testing
     conn = sqlite3.connect('users.db')
