@@ -9,3 +9,4 @@ router.register(r'messages', MessageViewSet, basename='message')
 urlpatterns = [
     path('', include(router.urls)),
 ]
+#messaging
