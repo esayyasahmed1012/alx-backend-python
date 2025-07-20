@@ -11,10 +11,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['conversation_id', 'created_at']  # Filter by conversation_id or created_at
+    filterset_fields = ['conversation_id', 'created_at']
 
     def get_queryset(self):
-        # Only show conversations where the user is a participant
         return Conversation.objects.filter(participants=self.request.user)
 
     def create(self, request, *args, **kwargs):
@@ -39,7 +38,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['conversation_id', 'sender__user_id', 'sent_at']  # Filter by conversation, sender, or sent_at
+    filterset_fields = ['conversation_id', 'sender__user_id', 'sent_at']
 
     def get_queryset(self):
         return Message.objects.filter(conversation__participants=self.request.user)
