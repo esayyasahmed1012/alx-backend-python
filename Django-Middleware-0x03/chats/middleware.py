@@ -18,14 +18,13 @@
 #         response = self.get_response(request)
 #         return response
 
-# Django-Middleware-0x03/chats/middleware.py
 from django.http import HttpResponseForbidden
 from django.utils import timezone
 from datetime import time, timedelta
 from collections import defaultdict
 import time as time_module
 
-
+# In-memory store for message counts (IP -> [(timestamp, count)])
 message_counts = defaultdict(list)
 
 class RolePermissionMiddleware:
@@ -50,4 +49,40 @@ class RolePermissionMiddleware:
         return response
 
 # Existing RestrictAccessByTimeMiddleware (included if still needed)
-class Restr
+class RestrictAccessByTimeMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        current_time = timezone.now().time()
+        start_time = time(21, 0)  # 9PM
+        end_time = time(18, 0)    # 6PM
+        if not (start_time <= current_time or current_time <= end_time):
+            return HttpResponseForbidden("Access to messaging is restricted between 6PM and 9PM.")
+        response = self.get_response(request)
+        return response
+
+# Existing OffensiveLanguageMiddleware (included if still needed)
+class OffensiveLanguageMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.message_limit = 5  # Max messages per minute
+        self.time_window = 60  # Time window in seconds (1 minute)
+
+    def __call__(self, request):
+        ip_address = request.META.get('REMOTE_ADDR')
+        if request.method == 'POST':
+            current_time = time_module.time()
+            message_counts[ip_address] = [
+                (ts, count) for ts, count in message_counts[ip_address]
+                if current_time - ts <= self.time_window
+            ]
+            total_messages = sum(count for _, count in message_counts[ip_address])
+            if total_messages >= self.message_limit:
+                return HttpResponse(
+                    "Rate limit exceeded: Only 5 messages per minute allowed.",
+                    status=429
+                )
+            message_counts[ip_address].append((current_time, 1))
+        response = self.get_response(request)
+        return response
