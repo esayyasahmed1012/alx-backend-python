@@ -18,28 +18,53 @@
 #         response = self.get_response(request)
 #         return response
 
-
-# Django-Middleware-0x03/chats/middleware.py
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponse
 from django.utils import timezone
-from datetime import time
+from datetime import time, timedelta
+from collections import defaultdict
+import time as time_module
 
+# In-memory store for message counts (IP -> [(timestamp, count)])
+message_counts = defaultdict(list)
+
+class OffensiveLanguageMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.message_limit = 5  # Max messages per minute
+        self.time_window = 60  # Time window in seconds (1 minute)
+
+    def __call__(self, request):
+        # Get client IP address
+        ip_address = request.META.get('REMOTE_ADDR')
+
+        # Only process POST requests (assumed to be chat messages)
+        if request.method == 'POST':
+            current_time = time_module.time()
+
+            # Clean up old timestamps outside the time window
+            message_counts[ip_address] = [
+                (ts, count) for ts, count in message_counts[ip_address]
+                if current_time - ts <= self.time_window
+            ]
+
+            # Count total messages in the current time window
+            total_messages = sum(count for _, count in message_counts[ip_address])
+
+            # Check if the limit is exceeded
+            if total_messages >= self.message_limit:
+                return HttpResponse(
+                    "Rate limit exceeded: Only 5 messages per minute allowed.",
+                    status=429
+                )
+
+            # Increment message count for this IP
+            message_counts[ip_address].append((current_time, 1))
+
+        # Proceed with the request
+        response = self.get_response(request)
+        return response
+
+# Existing RestrictAccessByTimeMiddleware (included for completeness)
 class RestrictAccessByTimeMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-
-    def __call__(self, request):
-        # Get current time in server's timezone
-        current_time = timezone.now().time()
-        
-        # Define allowed time range (9PM to 6PM)
-        start_time = time(21, 0)  # 9PM
-        end_time = time(18, 0)    # 6PM
-        
-        # Check if current time is outside allowed hours
-        if not (start_time <= current_time or current_time <= end_time):
-            return HttpResponseForbidden("Access to messaging is restricted between 6PM and 9PM.")
-        
-        # If time is within allowed range, proceed with request
-        response = self.get_response(request)
-        return response
