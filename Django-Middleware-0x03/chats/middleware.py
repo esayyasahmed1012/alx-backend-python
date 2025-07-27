@@ -18,7 +18,7 @@
 #         response = self.get_response(request)
 #         return response
 
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponse
 from django.utils import timezone
 from datetime import time, timedelta
 from collections import defaultdict
@@ -48,7 +48,6 @@ class RolePermissionMiddleware:
         response = self.get_response(request)
         return response
 
-# Existing RestrictAccessByTimeMiddleware (included if still needed)
 class RestrictAccessByTimeMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -62,7 +61,6 @@ class RestrictAccessByTimeMiddleware:
         response = self.get_response(request)
         return response
 
-# Existing OffensiveLanguageMiddleware (included if still needed)
 class OffensiveLanguageMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
