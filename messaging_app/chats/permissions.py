@@ -6,9 +6,9 @@ class IsParticipantOfConversation(BasePermission):
         return request.user and request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
-            return True
-        return request.user == obj.sender or request.user == obj.recipient
+        if request.method in SAFE_METHODS or request.method in ["PUT", "PATCH", "DELETE"]:
+            return request.user == obj.sender or request.user == obj.recipient
+        return False
 
 class IsOwnerOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
