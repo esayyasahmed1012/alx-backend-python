@@ -18,53 +18,36 @@
 #         response = self.get_response(request)
 #         return response
 
-from django.http import HttpResponseForbidden, HttpResponse
+# Django-Middleware-0x03/chats/middleware.py
+from django.http import HttpResponseForbidden
 from django.utils import timezone
 from datetime import time, timedelta
 from collections import defaultdict
 import time as time_module
 
-# In-memory store for message counts (IP -> [(timestamp, count)])
+
 message_counts = defaultdict(list)
 
-class OffensiveLanguageMiddleware:
+class RolePermissionMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-        self.message_limit = 5  # Max messages per minute
-        self.time_window = 60  # Time window in seconds (1 minute)
 
     def __call__(self, request):
-        # Get client IP address
-        ip_address = request.META.get('REMOTE_ADDR')
+        # Check if user is authenticated
+        if not request.user.is_authenticated:
+            return HttpResponseForbidden("Access denied: Authentication required.")
 
-        # Only process POST requests (assumed to be chat messages)
-        if request.method == 'POST':
-            current_time = time_module.time()
+        # Check if user has admin or moderator role
+        try:
+            user_role = request.user.role.lower()  # Assuming role is a field on the user model
+            if user_role not in ['admin', 'moderator']:
+                return HttpResponseForbidden("Access denied: Only admins or moderators allowed.")
+        except AttributeError:
+            return HttpResponseForbidden("Access denied: User role not defined.")
 
-            # Clean up old timestamps outside the time window
-            message_counts[ip_address] = [
-                (ts, count) for ts, count in message_counts[ip_address]
-                if current_time - ts <= self.time_window
-            ]
-
-            # Count total messages in the current time window
-            total_messages = sum(count for _, count in message_counts[ip_address])
-
-            # Check if the limit is exceeded
-            if total_messages >= self.message_limit:
-                return HttpResponse(
-                    "Rate limit exceeded: Only 5 messages per minute allowed.",
-                    status=429
-                )
-
-            # Increment message count for this IP
-            message_counts[ip_address].append((current_time, 1))
-
-        # Proceed with the request
+        # Proceed with the request if user has required role
         response = self.get_response(request)
         return response
 
-# Existing RestrictAccessByTimeMiddleware (included for completeness)
-class RestrictAccessByTimeMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
+# Existing RestrictAccessByTimeMiddleware (included if still needed)
+class Restr
