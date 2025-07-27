@@ -1,0 +1,107 @@
+postman_collection = {
+    "info": {
+        "name": "Messaging App API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Auth - Obtain Token",
+            "request": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                    "mode": "raw",
+                    "raw": '{\n  "username": "your_username",\n  "password": "your_password"\n}'
+                },
+                "url": {
+                    "raw": "http://localhost:8000/api/token/",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8000",
+                    "path": ["api", "token", ""]
+                }
+            }
+        },
+        {
+            "name": "Create Conversation",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {"key": "Content-Type", "value": "application/json"},
+                    {"key": "Authorization", "value": "Bearer {{access_token}}"}
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": '{\n  "participants": [2]\n}'
+                },
+                "url": {
+                    "raw": "http://localhost:8000/api/conversations/",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8000",
+                    "path": ["api", "conversations", ""]
+                }
+            }
+        },
+        {
+            "name": "Send Message",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {"key": "Content-Type", "value": "application/json"},
+                    {"key": "Authorization", "value": "Bearer {{access_token}}"}
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": '{\n  "message_body": "Hey there!"\n}'
+                },
+                "url": {
+                    "raw": "http://localhost:8000/api/conversations/1/messages/",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8000",
+                    "path": ["api", "conversations", "1", "messages", ""]
+                }
+            }
+        },
+        {
+            "name": "Get All Conversations",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {"key": "Authorization", "value": "Bearer {{access_token}}"}
+                ],
+                "url": {
+                    "raw": "http://localhost:8000/api/conversations/",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8000",
+                    "path": ["api", "conversations", ""]
+                }
+            }
+        },
+        {
+            "name": "Unauthorized Test - Get Conversations",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8000/api/conversations/",
+                    "protocol": "http",
+                    "host": ["localhost"],
+                    "port": "8000",
+                    "path": ["api", "conversations", ""]
+                }
+            }
+        }
+    ]
+}
+
+import json
+from pathlib import Path
+
+output_path = Path("/mnt/data/post_man-Collections.json")
+with open(output_path, "w") as f:
+    json.dump(postman_collection, f, indent=2)
+
+output_path.name
