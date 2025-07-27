@@ -28,4 +28,3 @@ urlpatterns = [
     path('api/', include(conversations_router.urls)),
     path('api-auth/', include('rest_framework.urls')),
 ]
-
