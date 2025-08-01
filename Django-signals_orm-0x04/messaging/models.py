@@ -8,7 +8,8 @@ class Message(models.Model):
     content = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
     edited = models.BooleanField(default=False)
-    edited_by = models.ForeignKey(User, related_name='edited_messages', on_delete=models.SET_NULL, null=True, blank=True)  # New field
+    edited_by = models.ForeignKey(User, related_name='edited_messages', on_delete=models.SET_NULL, null=True, blank=True)
+    parent_message = models.ForeignKey('self', related_name='replies', on_delete=models.CASCADE, null=True, blank=True)  # New field for threaded replies
 
     class Meta:
         ordering = ['-timestamp']
