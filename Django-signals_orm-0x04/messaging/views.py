@@ -6,6 +6,16 @@ from django.db.models import Q
 from .models import Message
 
 @login_required
+def inbox(request):
+    """
+    Display unread messages for the current user.
+    """
+    unread_messages = Message.unread.unread_for_user(request.user)
+    return render(request, 'messaging/inbox.html', {
+        'unread_messages': unread_messages
+    })
+
+@login_required
 def message_history(request, message_id):
     message = get_object_or_404(Message, id=message_id)
     if request.user not in [message.sender, message.receiver]:
@@ -47,7 +57,6 @@ def delete_user(request):
 
 @login_required
 def threaded_conversation(request, message_id):
-    # Use filter to ensure user has access, with select_related for foreign keys and prefetch_related for replies
     messages = Message.objects.filter(
         Q(id=message_id) & (Q(sender=request.user) | Q(receiver=request.user))
     ).select_related('sender', 'receiver', 'parent_message').prefetch_related('replies')
@@ -70,6 +79,11 @@ def reply_message(request, message_id):
         content = request.POST.get('content')
         if content:
             receiver = parent_message.sender if request.user == parent_message.receiver else parent_message.receiver
+            # Mark parent message as read if the user is the receiver
+            if request.user == parent_message.receiver and not parent_message.read:
+                parent_message.read = True
+                parent_message.save()
+            # Create reply
             Message.objects.create(
                 sender=request.user,
                 receiver=receiver,
