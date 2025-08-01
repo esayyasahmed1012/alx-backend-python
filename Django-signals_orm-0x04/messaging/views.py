@@ -3,7 +3,38 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.views.decorators.cache import cache_page
 from .models import Message
+
+@login_required
+@cache_page(60)  # Cache for 60 seconds
+def message_list(request, user_id=None):
+    """
+    Display all messages between the current user and another user.
+    If user_id is None, list all conversations with distinct users.
+    """
+    if user_id:
+        other_user = get_object_or_404(User, id=user_id)
+        messages = Message.objects.filter(
+            Q(sender=request.user, receiver=other_user) | Q(sender=other_user, receiver=request.user)
+        ).select_related('sender', 'receiver').only(
+            'id', 'sender__username', 'receiver__username', 'content', 'timestamp', 'read'
+        ).order_by('timestamp')
+        return render(request, 'messaging/message_list.html', {
+            'messages': messages,
+            'other_user': other_user
+        })
+    else:
+        # List distinct users the current user has messaged or received messages from
+        sent = Message.objects.filter(sender=request.user).values('receiver__id', 'receiver__username').distinct()
+        received = Message.objects.filter(receiver=request.user).values('sender__id', 'sender__username').distinct()
+        # Combine and deduplicate users
+        users = { (item['receiver__id'], item['receiver__username']) for item in sent } | \
+                { (item['sender__id'], item['sender__username']) for item in received }
+        users = [{'id': uid, 'username': uname} for uid, uname in users]
+        return render(request, 'messaging/message_list.html', {
+            'users': users
+        })
 
 @login_required
 def inbox(request):
@@ -71,7 +102,6 @@ def threaded_conversation(request, message_id):
         return render(request, 'messaging/error.html', {'error': 'Message not found or unauthorized access'})
     
     root_message = messages.first()
-    # Mark the root message as read if the user is the receiver
     if request.user == root_message.receiver and not root_message.read:
         root_message.read = True
         root_message.save()
