@@ -37,9 +37,10 @@ def cleanup_user_data(sender, instance, **kwargs):
     """
     Clean up related data when a user is deleted.
     """
-    # Messages where user is sender or receiver are deleted via CASCADE
-    # Notifications are deleted via CASCADE
-    # Explicitly delete MessageHistory for messages that might remain
-    # (e.g., if CASCADE didn't cover all cases)
+    # Explicitly delete messages where user is sender or receiver
+    messages = Message.objects.filter(models.Q(sender=instance) | models.Q(receiver=instance))
+    messages.delete()  # This will also delete related MessageHistory and Notification due to CASCADE
+
+    # Additional cleanup for MessageHistory (redundant but explicit)
     MessageHistory.objects.filter(message__sender=instance).delete()
     MessageHistory.objects.filter(message__receiver=instance).delete()
