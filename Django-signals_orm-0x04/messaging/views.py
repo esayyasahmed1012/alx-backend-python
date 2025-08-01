@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.db.models import Q
 from .models import Message
 
 @login_required
@@ -46,12 +47,17 @@ def delete_user(request):
 
 @login_required
 def threaded_conversation(request, message_id):
-    message = get_object_or_404(Message.objects.prefetch_related('replies'), id=message_id)
-    if request.user not in [message.sender, message.receiver]:
-        return render(request, 'messaging/error.html', {'error': 'Unauthorized access'})
+    # Use filter to ensure user has access, with select_related for foreign keys and prefetch_related for replies
+    messages = Message.objects.filter(
+        Q(id=message_id) & (Q(sender=request.user) | Q(receiver=request.user))
+    ).select_related('sender', 'receiver', 'parent_message').prefetch_related('replies')
     
+    if not messages.exists():
+        return render(request, 'messaging/error.html', {'error': 'Message not found or unauthorized access'})
+    
+    root_message = messages.first()
     return render(request, 'messaging/threaded_conversation.html', {
-        'root_message': message
+        'root_message': root_message
     })
 
 @login_required
@@ -63,7 +69,6 @@ def reply_message(request, message_id):
     if request.method == 'POST':
         content = request.POST.get('content')
         if content:
-            # Determine receiver: reply to the other user in the conversation
             receiver = parent_message.sender if request.user == parent_message.receiver else parent_message.receiver
             Message.objects.create(
                 sender=request.user,
