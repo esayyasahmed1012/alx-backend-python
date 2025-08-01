@@ -2,6 +2,13 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+class UnreadMessagesManager(models.Manager):
+    def unread_for_user(self, user):
+        """
+        Filter unread messages where the user is the receiver.
+        """
+        return self.filter(receiver=user, read=False).only('id', 'sender__username', 'content', 'timestamp')
+
 class Message(models.Model):
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
@@ -9,7 +16,11 @@ class Message(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
     edited = models.BooleanField(default=False)
     edited_by = models.ForeignKey(User, related_name='edited_messages', on_delete=models.SET_NULL, null=True, blank=True)
-    parent_message = models.ForeignKey('self', related_name='replies', on_delete=models.CASCADE, null=True, blank=True)  # New field for threaded replies
+    parent_message = models.ForeignKey('self', related_name='replies', on_delete=models.CASCADE, null=True, blank=True)
+    read = models.BooleanField(default=False)  # New field to track read status
+
+    objects = models.Manager()  # Default manager
+    unread = UnreadMessagesManager()  # Custom manager for unread messages
 
     class Meta:
         ordering = ['-timestamp']
