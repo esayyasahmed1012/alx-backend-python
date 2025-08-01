@@ -7,7 +7,8 @@ class Message(models.Model):
     receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
     content = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
-    edited = models.BooleanField(default=False)  # New field to track if message was edited
+    edited = models.BooleanField(default=False)
+    edited_by = models.ForeignKey(User, related_name='edited_messages', on_delete=models.SET_NULL, null=True, blank=True)  # New field
 
     class Meta:
         ordering = ['-timestamp']
