@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from .models import Message, Notification
+from .models import Message, Notification, MessageHistory
 from django.utils import timezone
 
 class MessageNotificationTests(TestCase):
@@ -53,3 +53,42 @@ class MessageNotificationTests(TestCase):
             message=message
         ).count()
         self.assertEqual(notification_count, 1)
+
+    def test_message_edit_creates_history(self):
+        # Create a message
+        message = Message.objects.create(
+            sender=self.sender,
+            receiver=self.receiver,
+            content="Original message"
+        )
+
+        # Update the message
+        original_content = message.content
+        message.content = "Edited message"
+        message.save()
+
+        # Check if history was created
+        history = MessageHistory.objects.filter(message=message).first()
+        self.assertIsNotNone(history)
+        self.assertEqual(history.old_content, original_content)
+        self.assertEqual(history.message, message)
+        self.assertTrue(message.edited)
+        self.assertTrue(
+            abs(history.edited_at - timezone.now()).total_seconds() < 60
+        )
+
+    def test_no_history_for_unchanged_content(self):
+        # Create a message
+        message = Message.objects.create(
+            sender=self.sender,
+            receiver=self.receiver,
+            content="Original message"
+        )
+
+        # Update without changing content
+        message.save()
+
+        # Check no history was created
+        history_count = MessageHistory.objects.filter(message=message).count()
+        self.assertEqual(history_count, 0)
+        self.assertFalse(message.edited)
