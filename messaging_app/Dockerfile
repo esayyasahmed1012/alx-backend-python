@@ -16,5 +16,5 @@ COPY . .
 # Expose port 8000 (default for Django)
 EXPOSE 8000
 
-# Command to run the Django app with gunicorn (production server)
+# Command to run the Django app with gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "your_project_name.wsgi:application"]
