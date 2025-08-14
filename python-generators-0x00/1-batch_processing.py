@@ -1,38 +1,33 @@
-import mysql.connector
-from contextlib import contextmanager
 import os
+import mysql.connector
+import csv
 from dotenv import load_dotenv
 
 load_dotenv()
-# ✅ Clean DB config (no 'port', no 'table')
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'database': os.getenv('DB_NAME'),
+
+db_config={
+    'host':os.getenv("DB_HOST"),
+    'user':os.getenv("DB_USER"),
+    'password':os.getenv("DB_PASSWORD"),
+    'database':os.getenv("DB_NAME")
 }
 
-@contextmanager
-def get_db_connection():
-    conn = mysql.connector.connect(**DB_CONFIG)
-    try:
-        yield conn
-    finally:
-        conn.close()
 
+def db_connect():
+    return mysql.connector.connect(**db_config)
 def stream_users_in_batches(batch_size):
-    with get_db_connection() as conn:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT COUNT(*) FROM user_data")
-        total_users = cursor.fetchone()['COUNT(*)']
-        
-        for offset in range(0, total_users, batch_size):
-            cursor.execute(f"SELECT * FROM user_data LIMIT {batch_size} OFFSET {offset}")
-            batch = cursor.fetchall()
-            yield batch
-
+    connection=db_connect()
+    cursor=connection.cursor(dictionary=True)
+    offset=0
+    while(True):
+        cursor.execute("SELECT * FROM user_data LIMIT %s OFFSET %s", (batch_size, offset))
+        batch=cursor.fetchall()
+        if not batch:
+            break
+        yield batch
+        offset+=batch_size
 def batch_processing(batch_size):
     for batch in stream_users_in_batches(batch_size):
-        print(f"Processing batch of {len(batch)} users")
-        for user in batch:
+        filtered_user=[user for user in batch if user['age']>25]
+        for user in filtered_user:
             print(user)
