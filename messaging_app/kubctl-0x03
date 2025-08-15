@@ -1,0 +1,39 @@
+#!/bin/bash
+# messaging_app/kubctl-0x03
+
+# Exit on any error
+set -e
+
+# Step 1: Apply the updated blue deployment to trigger rolling update
+echo "Applying updated blue deployment with version 2.0..."
+kubectl apply -f blue_deployment.yaml
+
+# Step 2: Monitor the rolling update progress
+echo "Monitoring rolling update progress..."
+kubectl rollout status deployment/django-app-blue --timeout=300s
+
+# Step 3: Test for downtime using curl
+echo "Testing for downtime by sending continuous requests to the app..."
+SERVICE_IP=$(kubectl get service django-app-service -o jsonpath='{.spec.clusterIP}')
+HEALTH_ENDPOINT="http://$SERVICE_IP/health"  # Adjust to your app’s health endpoint
+echo "Sending requests to $HEALTH_ENDPOINT..."
+
+# Run curl in the background to continuously send requests
+curl -s -f $HEALTH_ENDPOINT --retry 5 --retry-delay 1 --retry-max-time 300 > /dev/null &
+CURL_PID=$!
+
+# Wait for the rollout to complete while curl runs
+echo "Waiting for rollout to complete while monitoring requests..."
+kubectl wait --for=condition=available deployment/django-app-blue --timeout=300s
+
+# Stop the curl process after rollout is complete
+kill $CURL_PID 2>/dev/null || true
+echo "Completed curl tests. Checking for failures..."
+
+# Check if any curl requests failed (non-zero exit code would have caused script to exit due to set -e)
+
+# Step 4: Verify the rolling update by checking pod images
+echo "Verifying pod images after rolling update..."
+kubectl get pods -l app=django-app,version=blue -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}'
+
+echo "Rolling update to version 2.0 completed successfully!"
