@@ -1,0 +1,39 @@
+# green_deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app-green
+  namespace: default
+  labels:
+    app: django-app
+    version: green
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: django-app
+      version: green
+  template:
+    metadata:
+      labels:
+        app: django-app
+        version: green
+    spec:
+      containers:
+      - name: django-app
+        image: docker.io/code/django-app:2.0  
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        readinessProbe:
+          httpGet:
+            path: /health  
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
