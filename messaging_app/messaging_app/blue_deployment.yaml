@@ -1,4 +1,4 @@
-# blue_deployment.yaml
+# messaging_app/blue_deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: django-app
-        image: docker.io/code/django-app:1.0  
+        image: docker.io/code/django-app:2.0  
         ports:
         - containerPort: 8000
         resources:
