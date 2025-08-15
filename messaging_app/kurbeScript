@@ -1,5 +1,6 @@
 #!/bin/bash
 
+<<<<<<< HEAD
 # Script: kurbeScript
 # Purpose: Set up a local Kubernetes cluster using Minikube, verify its status, and list pods.
 
@@ -56,3 +57,41 @@ kubectl get pods --all-namespaces
 
 # Exit with success status
 exit 0
+=======
+set -e
+
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+if ! command_exists minikube; then
+    echo "Error: Minikube is not installed. Please install Minikube first."
+    echo "On Linux: curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && sudo install minikube-linux-amd64 /usr/local/bin/minikube"
+    echo "On macOS: brew install minikube"
+    exit 1
+fi
+
+if ! command_exists kubectl; then
+    echo "Error: kubectl is not installed. Please install kubectl first."
+    echo "On Linux: curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/"
+    echo "On macOS: brew install kubectl"
+    exit 1
+fi
+
+if ! command_exists docker; then
+    echo "Error: Docker is not installed. Please install Docker first."
+    echo "Follow instructions at https://docs.docker.com/get-docker/"
+    exit 1
+fi
+
+echo "Starting Minikube cluster..."
+minikube start --driver=docker
+
+echo "Verifying cluster status..."
+kubectl cluster-info
+
+echo "Retrieving available pods..."
+kubectl get pods --all-namespaces
+
+echo "Kubernetes cluster is running, and pod information has been retrieved."
+>>>>>>> ece027ceb1cbebd50e40dab54b3fd419961a2f97
