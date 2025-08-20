@@ -1,0 +1,52 @@
+# messaging_app/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: messaging-app-deployment
+  namespace: default
+  labels:
+    app: messaging-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: messaging-app
+  template:
+    metadata:
+      labels:
+        app: messaging-app
+    spec:
+      containers:
+      - name: messaging-app
+        image: ghcr.io/code/alx-backend-python/messaging-app:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DJANGO_SETTINGS_MODULE
+          value: "messaging_app.settings"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: messaging-app-secrets
+              key: database-url
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: messaging-app-service
+  namespace: default
+spec:
+  selector:
+    app: messaging-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

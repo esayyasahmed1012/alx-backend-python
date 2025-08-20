@@ -1,0 +1,54 @@
+#!/bin/bash
+# kubctl-0x02
+
+# Exit on any error
+set -e
+
+# Apply blue deployment (current version)
+echo "Applying blue deployment..."
+kubectl apply -f blue_deployment.yaml
+
+# Apply green deployment (new version)
+echo "Applying green deployment..."
+kubectl apply -f green_deployment.yaml
+
+# Wait for green deployment to be ready
+echo "Waiting for green deployment to be ready..."
+kubectl wait --for=condition=available deployment/django-app-green --timeout=300s
+
+# Check logs of green deployment for errors
+echo "Checking logs of green deployment for errors..."
+GREEN_PODS=$(kubectl get pods -l app=django-app,version=green -o jsonpath="{.items[*].metadata.name}")
+
+ERROR_FOUND=false
+for POD in $GREEN_PODS; do
+  echo "Checking logs for pod $POD..."
+  if kubectl logs $POD | grep -i "error"; then
+    echo "Errors found in pod $POD logs!"
+    ERROR_FOUND=true
+  else
+    echo "No errors found in pod $POD logs."
+  fi
+done
+
+if [ "$ERROR_FOUND" = true ]; then
+  echo "Errors detected in green deployment. Aborting traffic switch."
+  exit 1
+fi
+
+# Switch traffic to green deployment by updating the Service
+echo "Switching traffic to green deployment..."
+kubectl patch service django-app-service -p '{"spec":{"selector":{"app":"django-app","version":"green"}}}'
+
+# Wait for a moment to ensure traffic is routed correctly
+sleep 10
+
+# Verify the service is routing to green
+echo "Verifying service selector..."
+kubectl get service django-app-service -o jsonpath='{.spec.selector.version}'
+
+# Optional: Scale down blue deployment to save resources
+echo "Scaling down blue deployment..."
+kubectl scale deployment django-app-blue --replicas=0
+
+echo "Blue-green deployment completed successfully!"
