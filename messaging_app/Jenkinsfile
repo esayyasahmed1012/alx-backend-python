@@ -1,0 +1,50 @@
+pipeline {
+    agent {
+        docker {
+            image 'python:3.9' // Use a Python Docker image
+            args '-u root' // Run as root to install dependencies
+        }
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                // Pull code from the GitHub repository
+                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/<your-username>/alx-backend-python.git'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                // Navigate to messaging_app directory and install dependencies
+                dir('messaging_app') {
+                    sh 'pip install --user -r requirements.txt'
+                }
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                // Run pytest and generate a JUnit XML report
+                dir('messaging_app') {
+                    sh 'pip install --user pytest pytest-html'
+                    sh 'pytest --junitxml=test-report.xml'
+                }
+            }
+        }
+        stage('Generate Test Report') {
+            steps {
+                // Archive the test report
+                dir('messaging_app') {
+                    archiveArtifacts artifacts: 'test-report.xml', allowEmptyArchive: true
+                    // Optionally generate an HTML report with pytest-html
+                    sh 'pytest --html=report.html --self-contained-html'
+                    archiveArtifacts artifacts: 'report.html', allowEmptyArchive: true
+                }
+            }
+        }
+    }
+    post {
+        always {
+            // Publish the JUnit test results
+            junit 'messaging_app/test-report.xml'
+        }
+    }
+}
