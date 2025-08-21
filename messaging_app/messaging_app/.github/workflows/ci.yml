@@ -2,12 +2,12 @@ name: Django CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "**" ]
+    branches: [ "main" ]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     services:
@@ -16,57 +16,49 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: test_db
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD"
+          --health-cmd="mysqladmin ping -h localhost"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=3
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
 
-      - name: Install dependencies
-        working-directory: ./messaging_app
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flake8 coverage
 
-      - name: Wait for MySQL to be ready
-        run: |
-          sudo apt-get install -y mysql-client
-          until mysqladmin ping -h 127.0.0.1 -u test_user -ptest_password --silent; do
-            echo "Waiting for MySQL..."
-            sleep 5
-          done
+ 
+    - name: Run flake8 lint
+      run: |
+        echo "Running flake8..."
+        flake8 messaging_app --max-line-length=100 --statistics
+e
+    - name: Run tests with coverage
+      env:
+        DB_HOST: 127.0.0.1
+        DB_USER: root
+        DB_PASSWORD: root
+        DB_NAME: test_db
+      run: |
+        echo "Running tests with coverage..."
+        coverage run manage.py test
+        coverage xml
 
-      - name: Run migrations
-        working-directory: ./messaging_app
-        env:
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-        run: |
-          python manage.py migrate
-
-      - name: Run tests
-        working-directory: ./messaging_app
-        env:
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_password
-        run: |
-          python manage.py test
+ 
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.xml
