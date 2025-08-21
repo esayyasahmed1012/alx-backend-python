@@ -1,50 +1,65 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.9' // Use a Python Docker image
-            args '-u root' // Run as root to install dependencies
-        }
+    agent any
+
+    environment {
+        // Use credentials securely
+        GITHUB_CREDENTIALS = credentials('github-creds')
+        // Python virtual environment dir
+        VENV_DIR = '.venv'
     }
+
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                // Pull code from the GitHub repository
-                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/<your-username>/alx-backend-python.git'
+                git branch: 'main',
+                    url: 'https://github.com/<your-username>/alx-backend-python.git',
+                    credentialsId: 'github-creds'
             }
         }
-        stage('Install Dependencies') {
+
+        stage('Set up Python Env') {
             steps {
-                // Navigate to messaging_app directory and install dependencies
-                dir('messaging_app') {
-                    sh 'pip install --user -r requirements.txt'
-                }
+                sh """
+                python3 -m venv $VENV_DIR
+                source $VENV_DIR/bin/activate
+                pip install --upgrade pip
+                pip install -r messaging_app/requirements.txt
+                """
             }
         }
+
         stage('Run Tests') {
             steps {
-                // Run pytest and generate a JUnit XML report
-                dir('messaging_app') {
-                    sh 'pip install --user pytest pytest-html'
-                    sh 'pytest --junitxml=test-report.xml'
+                sh """
+                source $VENV_DIR/bin/activate
+                pytest messaging_app/tests --junitxml=pytest-report.xml
+                """
+            }
+            post {
+                always {
+                    junit 'pytest-report.xml'
                 }
             }
         }
-        stage('Generate Test Report') {
+
+        stage('Generate Coverage Report') {
             steps {
-                // Archive the test report
-                dir('messaging_app') {
-                    archiveArtifacts artifacts: 'test-report.xml', allowEmptyArchive: true
-                    // Optionally generate an HTML report with pytest-html
-                    sh 'pytest --html=report.html --self-contained-html'
-                    archiveArtifacts artifacts: 'report.html', allowEmptyArchive: true
+                sh """
+                source $VENV_DIR/bin/activate
+                pytest --cov=messaging_app --cov-report=xml
+                """
+            }
+            post {
+                always {
+                    publishCoverage adapters: [coberturaAdapter('coverage.xml')]
                 }
             }
         }
     }
+
     post {
         always {
-            // Publish the JUnit test results
-            junit 'messaging_app/test-report.xml'
+            echo 'Pipeline finished. Check reports above.'
         }
     }
 }
