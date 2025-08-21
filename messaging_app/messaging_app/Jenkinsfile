@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        // Use credentials securely
+        GITHUB_CREDENTIALS = credentials('github-creds')
+        // Python virtual environment dir
+        VENV_DIR = '.venv'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/<your-username>/alx-backend-python.git',
+                    credentialsId: 'github-creds'
+            }
+        }
+
+        stage('Set up Python Env') {
+            steps {
+                sh """
+                python3 -m venv $VENV_DIR
+                source $VENV_DIR/bin/activate
+                pip install --upgrade pip
+                pip install -r messaging_app/requirements.txt
+                """
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh """
+                source $VENV_DIR/bin/activate
+                pytest messaging_app/tests --junitxml=pytest-report.xml
+                """
+            }
+            post {
+                always {
+                    junit 'pytest-report.xml'
+                }
+            }
+        }
+
+        stage('Generate Coverage Report') {
+            steps {
+                sh """
+                source $VENV_DIR/bin/activate
+                pytest --cov=messaging_app --cov-report=xml
+                """
+            }
+            post {
+                always {
+                    publishCoverage adapters: [coberturaAdapter('coverage.xml')]
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished. Check reports above.'
+        }
+    }
+}
