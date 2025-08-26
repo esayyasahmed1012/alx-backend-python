@@ -1,14 +1,26 @@
+<<<<<<< HEAD
 # messaging_app/.github/workflows/ci.yml
+=======
+>>>>>>> 505645a90e1769b894996680c0b2fbdc7f64c008
 name: Django CI
 
 on:
   push:
+<<<<<<< HEAD
     branches:
       - main
   pull_request:
 
 jobs:
   test:
+=======
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+>>>>>>> 505645a90e1769b894996680c0b2fbdc7f64c008
     runs-on: ubuntu-latest
 
     services:
@@ -17,6 +29,7 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: test_db
+<<<<<<< HEAD
           MYSQL_USER: test_user
           MYSQL_PASSWORD: test_password
         ports:
@@ -68,3 +81,51 @@ jobs:
         run: |
           cd messaging_app
           python manage.py test
+=======
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flake8 coverage
+
+ 
+    - name: Run flake8 lint
+      run: |
+        echo "Running flake8..."
+        flake8 messaging_app --max-line-length=100 --statistics
+e
+    - name: Run tests with coverage
+      env:
+        DB_HOST: 127.0.0.1
+        DB_USER: root
+        DB_PASSWORD: root
+        DB_NAME: test_db
+      run: |
+        echo "Running tests with coverage..."
+        coverage run manage.py test
+        coverage xml
+
+ 
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.xml
+>>>>>>> 505645a90e1769b894996680c0b2fbdc7f64c008
