@@ -1,17 +1,21 @@
-import sqlite3
 
+import sqlite3
 class DatabaseConnection:
     def __init__(self, db_name):
         self.db_name=db_name
-        self.connection=None
+        self.conn=None
 
     def __enter__(self):
-        self.connection=sqlite3.connect(self.db_name)
-        return self.connection
-    def __exit__(self):
-        if self.connection:
-            self.connection.close()
-            print("connection closed")        
-with DatabaseConnection("sqlite.db") as conn:
+        self.conn=sqlite3.connect(self.db_name)
+        return self.conn
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.conn:
+            self.conn.close()
+            print("connection is closed")
+
+with DatabaseConnection('user.db') as conn:
     cursor=conn.cursor()
-    cursor.execute("SELECT * FROM users")
+    cursor.execute("Select * from Users") 
+    result = cursor.fetchall()
+    for row in result:
+        print(row)
