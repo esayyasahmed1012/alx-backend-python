@@ -40,6 +40,6 @@ def test_users_table(db_name):
         for user in results:
             print(user)
 if __name__=="__main__":
-    db_name='test.db'
+    db_name='users.db'
     setup_users_table(db_name)
     test_users_table(db_name)
