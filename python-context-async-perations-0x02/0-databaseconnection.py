@@ -1,4 +1,3 @@
-
 import sqlite3
 class DatabaseConnection:
     def __init__(self, db_name):
@@ -12,6 +11,8 @@ class DatabaseConnection:
         if self.conn:
             self.conn.close()
             print("connection is closed")
+
+
 
 with DatabaseConnection('user.db') as conn:
     cursor=conn.cursor()
